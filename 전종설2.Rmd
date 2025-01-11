@@ -1,0 +1,216 @@
+---
+title: "?쟾醫낆꽕2"
+output:
+  prettydoc::html_pretty:
+    theme: tactile
+    highlight: github
+  html_document:
+    df_print: paged
+---
+
+```{r setup, message=FALSE, ,warning=FALSE, results = 'hide'}
+library(dplyr)
+library(corrplot)
+library(car)
+library(leaps)
+library(psych) 
+```
+
+```{r}
+df <- read.csv(file='급속_수요', fileEncoding = "cp949")
+
+str(df)
+```
+
+
+```{r}
+df_cor <- df%>%
+  select(-법정동,-전기차.충전소.개수)
+corr_df <- cor(df_cor)
+corrplot(corr_df, method = 'number', order = 'hclust', type = 'lower', diag = FALSE)
+```
+
+```{r}
+set.seed(123)
+model <- lm(급속충전기.대.~., df_cor)
+
+summary(model)
+```
+
+```{r}
+vif(model)
+```
+
+```{r}
+df2 <- df_cor%>%
+  select(인구수, 급속충전기.대.,완속충전기.대., 전기차.등록.수, 친환경차_전기차.비율)
+```
+
+```{r}
+## best subset selection
+response <- df2$급속충전기.대.
+predictors <- df2[, c("인구수","완속충전기.대.","전기차.등록.수","친환경차_전기차.비율")]
+bestsub.model <- regsubsets(response ~ ., data = data.frame(response, predictors), nvmax = 4)
+best_subset <- summary(bestsub.model)$which[which.min(summary(bestsub.model)$bic), ]
+print(best_subset)
+```
+
+```{r}
+summary(bestsub.model)
+```
+
+```{r}
+#Performance measures
+cbind( 
+  RSS = summary(bestsub.model)$rss,
+  Cp     = summary(bestsub.model)$cp,
+  r2     = summary(bestsub.model)$rsq,
+  Adj_r2 = summary(bestsub.model)$adjr2,
+  BIC    =summary(bestsub.model)$bic
+)
+```
+
+```{r}
+predictors1 <- df2[, c("완속충전기.대.")]
+predictors2 <- df2[, c("인구수","완속충전기.대.")]
+predictors3 <- df2[, c("인구수","완속충전기.대.","친환경차_전기차.비율")]
+predictors4 <- df2[, c("인구수","완속충전기.대.","전기차.등록.수","친환경차_전기차.비율")]
+scaled_predictors1 <- scale(predictors1)
+scaled_predictors2 <- scale(predictors2)
+scaled_predictors3 <- scale(predictors3)
+scaled_predictors4 <- scale(predictors4)
+library(psych) 
+set.seed(123)
+kmo_result1 <- KMO(scaled_predictors1)
+print(kmo_result1)
+
+set.seed(123)
+kmo_result2 <- KMO(scaled_predictors2)
+print(kmo_result2)
+
+set.seed(123)
+kmo_result3 <- KMO(scaled_predictors3)
+print(kmo_result3)
+
+set.seed(123)
+kmo_result4 <- KMO(scaled_predictors4)
+print(kmo_result4)
+```
+
+```{r}
+lm2 <- lm(급속충전기.대.~인구수+완속충전기.대., data=df2)
+
+lm3 <- lm(급속충전기.대.~인구수+완속충전기.대.
+          +친환경차_전기차.비율, data=df2)
+
+lm4 <- lm(급속충전기.대.~인구수+완속충전기.대.
+          +전기차.등록.수
+          +친환경차_전기차.비율, data=df2)
+```
+
+```{r}
+anova(lm2,lm3,lm4)
+```
+
+```{r}
+## 최종 model 선택
+final_df <- df%>%
+  select("법정동","인구수","완속충전기.대.")
+str(final_df)
+```
+
+```{r}
+scree(final_df[-1])
+```
+
+```{r}
+fa.parallel(final_df[-1])
+```
+
+```{r}
+pa1 <- fa(final_df[-1], nfactors=1, fm="pa",max.iter = 100,rotate="oblimin")
+fa.diagram(pa1,digits = 2)
+```
+
+```{r}
+factor_loadings <- pa1$loadings
+factor_loadings
+```
+
+```{r}
+final_df$충전환경 <- final_df$인구수 * 0.48 + final_df$완속충전기.대. * 0.48
+```
+
+```{r}
+final_df$급속충전기결핍률 <- 1-(df0$급속충전기.대./df0$인구수)
+final_df$공공자전거거치대결핍률 <- 1-(df0$공공자전거.거치대수.LCD...QR./df0$인구수)
+final_df$택배함결핍률 <- 1-(df0$택배함.개수/df0$인구수)
+final_df$물류창고결핍률 <- 1-(df0$물류창고.개수/df0$인구수)
+str(final_df)
+```
+
+```{r}
+final <- final_df %>%
+  select(-완속충전기.대.,-인구수)
+str(final)
+```
+
+```{r}
+set.seed(123)
+
+final_pca2 <- prcomp(final[-1],scale=T)
+summary(final_pca2)
+```
+
+```{r}
+loadings <- final_pca2$rotation
+round(loadings,2)
+```
+
+```{r}
+final0 <- final%>%
+  select(법정동)
+
+final0$충전환경 <- final$충전환경*0.08
+final0$급속충전기 <- final$급속충전기결핍률*0.72
+final0$공공자전거거치 <- final$공공자전거거치대결핍률*0.03
+final0$택배함 <- final$택배함결핍률*0.15
+final0$물류창고 <- final$물류창고결핍률*0.68
+
+final0$score <- final0$충전환경+final0$급속충전기+final0$공공자전거거치+final0$택배함+final0$물류창고
+```
+
+```{r}
+score <- final0%>%
+  select("법정동","score")
+score$입지점수 <- (score$score/max(score$score))*100
+```
+
+```{r}
+quantile(score$입지점수,probs=seq(0,1,0.01))
+# 상위 10$
+```
+
+```{r}
+hist(score$입지점수)
+```
+
+```{r}
+density_plot <- density(score$입지점수)
+plot(density_plot)
+```
+
+```{r}
+score2 <- score%>%
+  arrange(desc(입지점수)) %>%
+  select(법정동, 입지점수)
+score2 
+```
+
+```{r}
+score <- score %>%
+  filter(입지점수 >= 80) %>%
+  arrange(desc(입지점수)) %>%
+  select(법정동, 입지점수)
+score
+```
