@@ -87,11 +87,59 @@ summary(k_med_clvalid)
 ![image](https://github.com/user-attachments/assets/d8284e0a-7c70-428c-899a-aa734b9b56a9)
 
 이런 경우에는 Between_SS / Total_SS 값을 비교합니다. 해당 값이 높을수록 잘 분류된 군집입니다. 클러스터 간의 거리를 나타내므로 값이 클수록 클러스터 간 구별이 잘 되는 것이기 때문입니다.
+
 ![image](https://github.com/user-attachments/assets/4792e5aa-b350-4c9f-ac10-4c54f1d430ea)
 
+k = 4일 때, Between_SS / Total_SS 값이 높으므로 K-means의 k는 4를 설정합니다.
 
+다음은 k = 4일 때, k-means 결과입니다.
 
-위와 같은 방법으로 클러스터링을 진행하고, 결과를 프로파일링해서  
+![image](https://github.com/user-attachments/assets/07235cee-4229-4354-99c3-53b96b924656)
+
+이렇게 군집을 얻었으면, 다음 단계는 프로파일링입니다. 
+```
+df_profile3 <- df6%>%
+  select(인구수,택배함.개수,물류창고.개수,공공자전거.거치대수.LCD...QR.,친환경차.등록대수.전기.수소.,충전소.개수.전기.수소.,친환경차.한대당.충전소.개수)
+
+# 프로파일링
+mean_4<- df_profile3 %>%
+  mutate(clst_k4 = km$cluster)%>%
+  group_by(clst_k4)%>%
+  summarise_all(mean)
+
+mean_4$한명당.택배함 <- mean_4$택배함.개수/mean_4$인구수
+mean_4$한명당.물류창고 <- mean_4$물류창고.개수/mean_4$인구수
+mean_4$한명당.친환경충전소 <- mean_4$충전소.개수.전기.수소./mean_4$인구수
+mean_4$한명당.자전거거치대 <- mean_4$공공자전거.거치대수.LCD...QR./mean_4$인구수
+
+mean_4%>%
+  select(clst_k4, 인구수, 한명당.택배함,한명당.물류창고,한명당.친환경충전소,한명당.자전거거치대,친환경차.한대당.충전소.개수)
+```
+![image](https://github.com/user-attachments/assets/b8ce011c-7947-4678-8e2a-93b0d659766a)
+
+cluster 1이 인구수 대비 시설들(택배함, 충전소, 공공자전거 거치대)이 부족한 것을 확인할 수 있습니다. 그렇다면, cluster 1이 target cluster입니다.
+
+그다음, cluster 1의 지역(법정동)을 저장합니다. 4개의 클러스터링 기법에서 두 번 이상 나온 지역을 선정하기 위해서입니다.
+```
+k_means_result <- k_means[km$cluster == 1, "법정동"]
+```
+
+위와 같은 방법으로 클러스터링을 진행하고, 결과를 프로파일링해서 target cluster를 찾습니다.
+
+참고로 Hierarchical Clustering의 경우, hc_method를 다음과 같이 응집형 계수가 값이 1에 가까운 hc_method를 사용했습니다. 값이 1에 가까울수록 강력한 클러스터링 구조. 즉, 군집이 가장 안정적이기 때문입니다.
+```
+d=dist(scaled_final)
+m <- c( "average", "single", "complete", "ward", "weighted","gaverage")
+names(m) <- c( "average", "single", "complete", "ward","weighted","gaverage")
+ac <- function(x) {
+  agnes(scaled_final, method = x)$ac
+}
+choose_best_alg<- map_dbl(m, ac)
+print(choose_best_alg)
+```
+![image](https://github.com/user-attachments/assets/b4376f01-e494-4a81-9956-2fdddf3586dd)
+
+ward의 ac값이 가장 높은 것을 확인할 수 있습니다. 이는 ward의 방법이 가장 강력한 클러스터링 구조를 식별한다는 것을 의미합니다.
 
 
 (1) k-means
@@ -100,9 +148,7 @@ summary(k_med_clvalid)
 k-means의 결과,  
 
 
-다음은 k = 4일 때, k-means 결과입니다.
 
-![image](https://github.com/user-attachments/assets/07235cee-4229-4354-99c3-53b96b924656)
 
 
  
