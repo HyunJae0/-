@@ -65,7 +65,23 @@ str(scaled_final)
 클러스터링에서 '인구수'처럼 스케일(값의 크기)이 큰 변수가 있으면, 두 변수 간 전체 거리 계산을 왜곡시킬 수 있기 때문에 스케일 조정이 필수입니다.
 '인구수'처럼 한 변수가 월등히 큰 수치를 갖고 있으면, 거리 기반 클러스터링에서 그 변수 하나가 전체 거리를 대부분 지배하게 됩니다. 결과적으로 클러스터링 결과가 '인구수'기준으로만 군집이 나뉘어버리고 '시설 수'같은 다른 변수들은 제대로 반영되지 못하는 문제가 발생합니다.
 ### 1.3 클러스터링 평가
+이 단계의 목표는 K-means, K-medoids, Hierarchical, Gaussian Mixture Clustering을 수행하여, 4개의 클러스터링 기법에서 두 번 이상 나온 지역을 선정하는 것입니다.
 
+군집의 수를 정하기 위해 기본적으로 많이 사용하는 Elbow Method, Silhouette Method, Gap Statistic Method 사용했으며, 그럼에도 군집의 수를 결정하기 어려울 때 내부 평가 방법 중 하나인 Dunn Index를 확인하여 군집의 수를 결정하였습니다. 
+
+예를 들어 K-medoids를 사용한 경우, 다음과 같이 Elbow 기법과 Silhouette 기법은 k = 3 또는 5를 생각할 수 있으나, Gap Statistic 기법의 결과는 Gap이 증가하기 직전인 k = 9가 최적으로 나왔습니다. 이런 경우는 군집의 수를 결정하기 어렵기 때문에 Dunn Index를 확인하였습니다.
+```
+#clValid
+set.seed(123)
+k_med_clvalid <- clValid(scaled_final,3:9, clMethods="pam",validation="internal", maxitems = nrow(scaled_final))
+summary(k_med_clvalid)
+```
+다음 그림은 앞의 3가지 기법(Elbow Method, Silhouette Method, Gap Statistic Method)의 결과를 고려해 k = 3부터 9까지 Duun 값을 확인한 결과입니다.  
+![image](https://github.com/user-attachments/assets/c66c1ee0-d896-4f16-b197-12371d6076ed)
+
+클러스터 간의 분리도가 높고, 클러스터 내의 응집도가 높을수록 Dunn 지수는 더 큰 값을 가집니다. 그러므로 Dunn 값이 가장 높은 k = 5로 결정하였습니다.
+
+ 
 ## 2. 회귀분석 모델링
 
 ## 3. PCA를 이용한 평가지표 설정
