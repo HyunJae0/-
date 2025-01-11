@@ -332,11 +332,30 @@ score
 
 두 번째 사항은 대통령 집무실이 용산으로 변경되면서 서울 비행 금지 구역이 변경되었습니다. 2023년 기준 비행 금지 구역 P73에 선정된 주유소가 있는지 확인합니다.
 
-### 4.1 비행 금지 구역(P-73) 좌표 설정
+### 4.1 거리 계산
+```
+def haversine_distance(lat1, lon1, lat2, lon2):
+    R = 6371  # 지구 반지름 (단위: km)
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    distance = R * c
+    return distance
+```
+lat1, lon1은 첫 번째 지점의 위경도, lat2, lon2는 두 번째 지점의 위경도입니다. 위경도 차이를 라디안으로 변환하고 하버사인 공식을 이용해 두 지점 사이의 구면 거리를 계산합니다. 함수 결과는 두 지점 간의 거리입니다.
+
+### 4.2 비행 금지 구역(P-73) 좌표 설정
 다음 그림은 2023년 서울시 드론 P-73 구역입니다. 
 ![image](https://github.com/user-attachments/assets/acec70b5-3eac-48b6-96ca-9d3cb9b293c5)
 
+```
+gas_station_df = pd.read_excel("/path/to/score_gas station_xy.xlsx")
+elec_station_df = pd.read_excel("/path/to/elec_station.xlsx")
 
-
+비행 금지 구역 좌표
+forbidden_area_centers = [(37.542222, 126.9952778), (37.5358333, 126.9772222)]
+forbidden_area_radius = 3.7 # 반경 3.7km 
+```
 # 결과
 ![image](https://github.com/user-attachments/assets/02a5beb5-99ac-4a84-8be4-66df44f432c1)
