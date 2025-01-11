@@ -265,10 +265,73 @@ final_df$택배함결핍률 <- 1-(df0$택배함.개수/df0$인구수)
 final_df$물류창고결핍률 <- 1-(df0$물류창고.개수/df0$인구수)
 ```
 
-### 3.2 PCA
+### 3.2 PCA를 이용한 평가 지표
+PCA의 Loading을 평가 지표의 가중치로 사용하기 위해 PCA를 수행했습니다. PCA Loading은 주성분 혹은 요인들이 한 변수를 정의하는 선형 결합된 가중치 계수입니다.
 
+```
+set.seed(123)
+final_pca2 <- prcomp(final[-1],scale=T)
+summary(final_pca2)
+```
+![image](https://github.com/user-attachments/assets/5441555d-0145-4689-8f10-b0b07d372ddc)
+
+주성분 결과는 위의 그림과 같습니다. 
+
+주성분 선택은 통상적으로, 누적 분산 비율이 80% 이상이 되는 주성분 개수를 선택합니다. 90% 이상의 설명력을 원한다면 4개의 주성분을 선택해도 됩니다. 
+
+다만, 주성분 3개일 때 전체 변동의 84.8% 정도를 설명하고 있고, 분산 비율도 PC4와 PC5를 합쳐야 15%이므로 주성분 3개를 선택합니다. 더 정확하게는 앞선 주성분들이 이미 대부분의 분산을 설명하고 있기 때문입니다.
+
+이제 가중치로 사용할 PCA의 Loading 값을 확인합니다.
+```
+loadings <- final_pca2$rotation
+round(loadings,2)
+```
+![image](https://github.com/user-attachments/assets/8417c83b-c031-4a62-921c-19b2a68d5d68)
+Loading은 주성분에 대한 각 변수의 영향력을 의미하며 임의적인 부호를 갖습니다. 
+
+주성분 3개를 선택했으므로 '충전환경' 변수에 대한 가중치는 0.08, '급속충전기결핍률' 변수에 대한 가중치는 0.72, '공공자전거거치대결핍률' 변수에 대한 가중치는 0.03, '택배함결핍률' 변수에 대한 가중치는 0.15, '물류창고결핍률' 변수에 대한 가중치는 0.68을 사용합니다.
+
+Score = 0.08 x 충전환경 + 0.72 x 급속충전기결핍률 + 0.03 x 공공자전거거치대결핍률 + 0.15 x 택배함결핍률 + 0.68  x   물류창고결핍률
+
+이 입지 점수를 이용해서 우선적으로 첨단 물류 복합 주유소가 필요한 '최종 입지'를 선정합니다.
+
+```
+final0$score <- final0$충전환경+final0$급속충전기+final0$공공자전거거치+final0$택배함+final0$물류창고
+score <- final0%>%
+  select("법정동","score")
+score$입지점수 <- (score$score/max(score$score))*100
+
+hist(score$입지점수)
+```
+![image](https://github.com/user-attachments/assets/7ed8b80f-77ca-498a-a0a9-b2970d8c1c02)
+
+```
+density_plot <- density(score$입지점수)
+plot(density_plot)
+```
+![image](https://github.com/user-attachments/assets/51cfe4ed-a366-4a88-9b97-11c5fd2db889)
+
+입지 점수의 분포를 고려해서 입지 점수가 80점 이상인 지역을 최종 입지로 선정하였습니다.
+
+해당 지역들은 다음과 같습니다.
+```
+score <- score %>%
+  filter(입지점수 >= 80) %>%
+  arrange(desc(입지점수)) %>%
+  select(법정동, 입지점수)
+score
+```
+![image](https://github.com/user-attachments/assets/185e63e5-36dc-4925-a236-4be03044a1bb)
 
 ## 4. 최종 선택
+이제 해당 지역들 중에서 다음 2가지를 고려해 첨단 물류 복합 주유소가 필요한 '주유소'를 선정합니다.
+- (1) 가장 가까운 충전소끼리의 거리가 먼 주유소일수록 급속 충전기 설치가 필요
+- (2) 첨단 물류 복합 주유소는 드론을 운영하므로, '비행 금지 구역'인지 확인 필요
+
+첫 번째 사항은 Haversine Method를 이용해 각 주유소에서 해당 지역에 위치한 모든 충전소끼리의 거리를 계산합니다. 각 주유소에서 가장 가까운 충전소까지의 거리를 확인해서, 거리가 먼 주유소를 선정합니다.
+
+두 번째 사항은 대통령 집무실이 용산으로 변경되면서 서울 비행 금지 구역이 변경되었습니다. 2023년 기준 비행 금지 구역 P73에 선정된 주유소가 있는지 확인합니다.
+
 
 # 결과
 ![image](https://github.com/user-attachments/assets/02a5beb5-99ac-4a84-8be4-66df44f432c1)
