@@ -1,0 +1,342 @@
+---
+title: "전종설1"
+output:
+  prettydoc::html_pretty:
+    theme: tactile
+    highlight: github
+  html_document:
+    df_print: paged
+---
+
+```{r setup, message=FALSE, ,warning=FALSE, results = 'hide'}
+library(dplyr)
+library(NbClust)
+library(doParallel)
+library(cluster)
+library(corrplot)
+library(factoextra)
+library(clValid)
+library(purrr)
+library(mclust)
+```
+
+```{r,message=FALSE, ,warning=FALSE, results = 'hide'}
+c1 <- makePSOCKcluster(4)
+registerDoParallel(c1)
+options(scipen=100000)
+```
+
+```{r}
+getwd()
+set_wd = getwd()
+file_path <- paste(set_wd, "final_data.csv", sep = "/")
+df6 <- read.csv(file_path, fileEncoding = "cp949")
+str(df6)
+```
+```{r}
+row.names(df6) <- df6$법정동
+df_name6 <- df6[,'법정동']
+```
+
+```{r}
+df_cor <- df6%>%
+  select(-법정동)
+corr_df <- cor(df_cor)
+corrplot(corr_df,method='number')
+```
+
+```{r}
+corrplot(corr_df, method = 'number', order = 'hclust', type = 'lower', diag = FALSE)
+```
+
+```{r}
+## 물류창고 수는 대부분의 지역이 적어서 클러스터링을 해도 유의미한 의미 x
+## 인구수가 물류센터에 필요한 택배함 개수, 공공자전거 거치대수 충전소 개수와 높은 양의 상관관계를 보이고 있음
+## 인구수와 각각 클러스터링을 하여 인구수는 많지만 해당 시설이 부족한 군집을 찾고
+## 각 시설들이 필요한 군집들을 voting을 통해 법정동 선정
+
+#인구수많지만, 공공자전거 거치대수, 충전소 개수, 택배함 개수 적은 곳이 target
+df5 <- df6[,c(2,3,5,7)]
+str(df5)
+```
+
+```{r}
+min_max_scaling <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
+
+# 데이터프레임의 모든 열에 Min-Max 스케일링 적용
+scaled_final <- as.data.frame(lapply(df5, min_max_scaling))
+row.names(scaled_final) <- row.names(df5)
+str(scaled_final)
+```
+
+```{r}
+set.seed(123)
+fviz_nbclust(scaled_final, kmeans, method = "wss")
+fviz_nbclust(scaled_final, kmeans, method = "silhouette")
+fviz_nbclust(scaled_final, kmeans, nstart = 50,  method = "gap_stat", nboot=500)
+```
+
+```{r}
+## 최종결과 도출
+# 위의 결과에 따라 k =2 일때와 k=4 비교
+set.seed(123)
+km2 <- kmeans(scaled_final, centers =2)
+km2
+```
+
+```{r}
+set.seed(1234)
+km <- kmeans(scaled_final, centers =4)
+km
+```
+
+```{r}
+set.seed(123)
+fviz_cluster(km, data = scaled_final)+theme_bw()
+```
+
+```{r}
+k_means <- cbind(df_name6, df6, km$cluster)
+str(k_means)
+str(df6)
+```
+
+```{r}
+df_profile3 <- df6%>%
+  select(인구수,택배함.개수,물류창고.개수,공공자전거.거치대수.LCD...QR.,친환경차.등록대수.전기.수소.,충전소.개수.전기.수소.,친환경차.한대당.충전소.개수)
+str(df6)
+```
+
+```{r}
+# 프로파일링
+mean_4<- df_profile3 %>%
+  mutate(clst_k4 = km$cluster)%>%
+  group_by(clst_k4)%>%
+  summarise_all(mean)
+mean_4
+```
+
+```{r}
+mean_4$한명당.택배함 <- mean_4$택배함.개수/mean_4$인구수
+mean_4$한명당.물류창고 <- mean_4$물류창고.개수/mean_4$인구수
+mean_4$한명당.친환경충전소 <- mean_4$충전소.개수.전기.수소./mean_4$인구수
+mean_4$한명당.자전거거치대 <- mean_4$공공자전거.거치대수.LCD...QR./mean_4$인구수
+
+mean_4%>%
+  select(clst_k4, 인구수, 한명당.택배함,한명당.물류창고,한명당.친환경충전소,한명당.자전거거치대,친환경차.한대당.충전소.개수)
+```
+
+```{r}
+# 확인 결과 군집 1이 target cluster
+
+# 인구수 적은데 전기차한대당충전소개수 적은 곳이 대상 = 1번 클러스터
+# km 데이터프레임에서 km$cluster 값이 1인 법정동 데이터 추출
+```
+
+```{r}
+k_means_result <- k_means[km$cluster == 1, "법정동"]
+k_means_result
+```
+
+```{r}
+# k-medoids
+set.seed(123)
+fviz_nbclust(scaled_final, pam, method="wss")
+# k=3? k=5?
+set.seed(123)
+fviz_nbclust(scaled_final, pam, method = "silhouette")
+# k=3
+
+#fviz_nbclust(scaled_final, pam, nstart = 50,  method = "gap_stat", nboot = 500)
+# k=9
+```
+
+```{r}
+#clValid
+set.seed(123)
+k_med_clvalid <- clValid(scaled_final,3:9, clMethods="pam",validation="internal", maxitems = nrow(scaled_final))
+summary(k_med_clvalid)
+```
+
+```{r}
+# 클러스터 간의 분리도가 높고, 클러스터 내의 응집도가 높을수록 던 지수는 더 큰 값을 가짐
+# Dunn 값이 높은 k=5 선택
+set.seed(123)
+k_med<- pam(scaled_final,k=5, metric="euclidean")
+```
+
+```{r}
+set.seed(123)
+fviz_cluster(k_med, data=scaled_final)
+```
+
+```{r}
+df_profile2 <- df6%>%
+  select(인구수,택배함.개수,물류창고.개수,공공자전거.거치대수.LCD...QR.,친환경차.등록대수.전기.수소.,충전소.개수.전기.수소.,친환경차.한대당.충전소.개수)
+```
+```{r}
+# ?봽濡쒗뙆?씪留?
+med_7<- df_profile2 %>%
+  mutate(clst_k5 = k_med$cluster)%>%
+  group_by(clst_k5)%>%
+  summarise_all(mean)
+med_7
+```
+```{r}
+med_7$한명당.택배함 <- med_7$택배함.개수/med_7$인구수
+med_7$한명당.물류창고 <- med_7$물류창고.개수/med_7$인구수
+med_7$한명당.친환경충전소 <- med_7$충전소.개수.전기.수소./med_7$인구수
+med_7$한명당.자전거거치대 <- med_7$공공자전거.거치대수.LCD...QR./med_7$인구수
+# 4번 군집 선택
+med_7%>%
+  select(clst_k5,인구수,한명당.택배함,한명당.물류창고,한명당.친환경충전소,한명당.자전거거치대,친환경차.한대당.충전소.개수)
+```
+
+```{r}
+k_medoids <- cbind(df_name6, df6, k_med$cluster)
+set.seed(123)
+k_med_result <- k_medoids[k_med$cluster == 4, "법정동"]
+k_med_result
+```
+
+```{r}
+# HC(Hierarchical)
+
+fviz_nbclust(scaled_final, hcut, method = "wss")
+# k=3 or k=4
+fviz_nbclust(scaled_final, hcut, method = "silhouette")
+# k=6
+fviz_nbclust(scaled_final, hcut, nstart = 50,  method = "gap_stat", nboot = 500)
+# k=3, 그러나 k=6부터 증가
+```
+
+```{r}
+set.seed(123)
+hcut_clvalid <- clValid(scaled_final,3:30, clMethods="hierarchical",validation="internal", maxitems = nrow(scaled_final))
+summary(hcut_clvalid)
+# k=3 선택
+```
+
+```{r}
+# 안정적인 군집 찾기
+## 응집형 계수가 값이 1에 가까울 수록 해당 Alg이 군집이 가장 안정적이다.
+## 1에 가까울수록 강력한 클러스터링 구조
+d=dist(scaled_final)
+m <- c( "average", "single", "complete", "ward", "weighted","gaverage")
+names(m) <- c( "average", "single", "complete", "ward","weighted","gaverage")
+ac <- function(x) {
+  agnes(scaled_final, method = x)$ac
+}
+choose_best_alg<- map_dbl(m, ac)
+print(choose_best_alg)
+```
+
+```{r}
+## ward가 ac값이 가장 높으므로 Ward의 방법이 평가된 네 가지 방법 중 가장 강력한 클러스터링 구조를 식별한다는 것을 알 수 있다.
+set.seed(123)
+hc.cut <- hcut(scaled_final, k = 3, hc_method = "ward.D")
+```
+
+```{r}
+set.seed(123)
+fviz_cluster(hc.cut, scaled_final)
+```
+
+```{r}
+df_profile2 <- df6%>%
+  select(인구수,택배함.개수,물류창고.개수,공공자전거.거치대수.LCD...QR.,친환경차.등록대수.전기.수소.,충전소.개수.전기.수소.,친환경차.한대당.충전소.개수)
+```
+
+```{r}
+# 프로파일링
+hcut_3<- df_profile2 %>%
+  mutate(clst_k3 = hc.cut$cluster)%>%
+  group_by(clst_k3)%>%
+  summarise_all(mean)
+hcut_3
+```
+
+```{r}
+hcut_3$한명당.택배함 <- hcut_3$택배함.개수/hcut_3$인구수
+hcut_3$한명당.물류창고 <- hcut_3$물류창고.개수/hcut_3$인구수
+hcut_3$한명당.친환경충전소 <- hcut_3$충전소.개수.전기.수소./hcut_3$인구수
+hcut_3$한명당.자전거거치대 <- hcut_3$공공자전거.거치대수.LCD...QR./hcut_3$인구수
+str(hcut_3)
+
+hcut_3%>%
+  select(clst_k3,인구수,한명당.택배함,한명당.물류창고,한명당.친환경충전소,한명당.자전거거치대,친환경차.한대당.충전소.개수)
+```
+
+```{r}
+# 2번 군집 선택
+hcut_cluster <- cbind(df_name6, df6, hc.cut$cluster)
+set.seed(123)
+hcut_result <- hcut_cluster[hc.cut$cluster == 2, "법정동"]
+hcut_result
+```
+
+```{r}
+# GMM(Gaussian Mixture)
+set.seed(123)
+gmm_model <- Mclust(scaled_final)
+gmm_model$G
+```
+
+```{r}
+set.seed(123)
+fviz_cluster(gmm_model, scaled_final)
+```
+
+```{r}
+set.seed(123)
+fviz_mclust(gmm_model, data=scaled_final,what = "classification")
+```
+
+```{r}
+df_profile2 <- df6%>%
+  select(인구수,택배함.개수,물류창고.개수,공공자전거.거치대수.LCD...QR.,친환경차.등록대수.전기.수소.,충전소.개수.전기.수소.,친환경차.한대당.충전소.개수)
+```
+
+```{r}
+# 프로파일링
+gmm_5<- df_profile2 %>%
+  mutate(clst_k5 = gmm_model$classification)%>%
+  group_by(clst_k5)%>%
+  summarise_all(mean)
+gmm_5
+```
+
+```{r}
+gmm_5$한명당.택배함 <- gmm_5$택배함.개수/gmm_5$인구수
+gmm_5$한명당.물류창고 <- gmm_5$물류창고.개수/gmm_5$인구수
+gmm_5$한명당.친환경충전소 <- gmm_5$충전소.개수.전기.수소./gmm_5$인구수
+gmm_5$한명당.자전거거치대 <- gmm_5$공공자전거.거치대수.LCD...QR./gmm_5$인구수
+
+gmm_5%>%
+  select(clst_k5,인구수,한명당.택배함,한명당.물류창고,한명당.친환경충전소,한명당.자전거거치대,친환경차.한대당.충전소.개수)
+```
+
+```{r}
+# 5번 군집 선택
+gmm_cluster <- cbind(df_name6, df6, gmm_model$classification)
+set.seed(123)
+gmm_result <- gmm_cluster[gmm_model$classification == 5, "법정동"]
+gmm_result
+```
+
+```{r}
+## vote
+
+result1 <- as.vector(k_means_result)
+result2 <- as.vector(k_med_result)
+result3 <- as.vector(hcut_result)
+result4 <- as.vector(gmm_result)
+result_vector <- c(result1, result2, result3, result4)
+value_counts <- table(result_vector)
+```
+```{r}
+result <- unique(result_vector[duplicated(result_vector) | duplicated(result_vector, fromLast = TRUE)])
+print(result)
+```
