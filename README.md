@@ -332,6 +332,11 @@ score
 
 두 번째 사항은 대통령 집무실이 용산으로 변경되면서 서울 비행 금지 구역이 변경되었습니다. 2023년 기준 비행 금지 구역 P73에 선정된 주유소가 있는지 확인합니다.
 
+### 4.1 비행 금지 구역(P-73) 좌표 설정
+다음 그림은 2023년 서울시 드론 P-73 구역입니다. 
+![image](https://github.com/user-attachments/assets/acec70b5-3eac-48b6-96ca-9d3cb9b293c5)
+
+
 
 # 결과
 ![image](https://github.com/user-attachments/assets/02a5beb5-99ac-4a84-8be4-66df44f432c1)
