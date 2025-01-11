@@ -29,7 +29,16 @@ Python
 ## 1. Data preprocessing
 
 ## 2. Clustering
+### 2.1 클러스터링 변수 선정
 
-## 3. Factor Analysis
+### 2.2 스케일링
 
-## 4. PCA
+### 2.3 클러스터링 평가
+
+## 3. 회귀분석 모델링
+
+## 4. PCA를 이용한 평가지표 설정
+
+## 5. 최종 선택
+
+
