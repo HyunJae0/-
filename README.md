@@ -246,6 +246,8 @@ fa.parallel(final_df[-1])
 pa1 <- fa(final_df[-1], nfactors=1, fm="pa",max.iter = 100,rotate="oblimin")
 fa.diagram(pa1,digits = 2)
 ```
+![image](https://github.com/user-attachments/assets/e0d0bc18-d42c-4aa0-a4fb-1507302e6e2a)
+
 'PA1'은 추출된 요인을 의미합니다. 변수 '인구수'와 '완속충전기.대'는 요인 PA1과 관련성이 있으며, 로딩 값이 0.48입니다. 로딩 값은 각 변수와 요인 간의 상관 관계를 나타냅니다. 
 
 ## 3. PCA를 이용한 평가지표 설정
