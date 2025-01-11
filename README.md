@@ -89,7 +89,8 @@ k-means의 결과, k = 2 또는 k = 4가 최적일 수 있습니다. 이런 경�
 ![image](https://github.com/user-attachments/assets/4792e5aa-b350-4c9f-ac10-4c54f1d430ea)
 
 다음은 k = 4일 때, k-means 결과입니다.
-![image](https://github.com/user-attachments/assets/12124618-8b05-4a6a-965a-09c77a491f36)
+![image](https://github.com/user-attachments/assets/07235cee-4229-4354-99c3-53b96b924656)
+
 
  
 ## 2. 회귀분석 모델링
