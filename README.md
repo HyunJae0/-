@@ -81,12 +81,24 @@ summary(k_med_clvalid)
 
 클러스터 간의 분리도가 높고, 클러스터 내의 응집도가 높을수록 Dunn 지수는 더 큰 값을 가집니다. 그러므로 Dunn 값이 가장 높은 k = 5로 결정하였습니다.
 
-위와 같은 방법으로 클러스터링을 진행했으며, 각각의 클러스터링 결과는 다음과 같습니다.
-(1) k-means
+그리고 k 값의 범위가 K-medoids와는 다르게 이산적으로 나오는 경우(예를 들어 k = 2 또는 k = 4), 다음과 같이 Between_SS / Total_SS 값을 비교했습니다.
+
+예를 들어 Elbow Method, Silhouette Method, Gap Statistic Method를 사용했을 때, k-means의 군집 수는 다음과 같이 k = 2 또는 k = 4가 최적일 수 있습니다.
 ![image](https://github.com/user-attachments/assets/d8284e0a-7c70-428c-899a-aa734b9b56a9)
 
-k-means의 결과, k = 2 또는 k = 4가 최적일 수 있습니다. 이런 경우에는 Between_SS / Total_SS 값을 비교합니다. 해당 값이 높을수록 잘 분류된 군집입니다. 클러스터 간의 거리를 나타내므로 값이 클수록 클러스터 간 구별이 잘 되는 것이기 때문입니다.
+이런 경우에는 Between_SS / Total_SS 값을 비교합니다. 해당 값이 높을수록 잘 분류된 군집입니다. 클러스터 간의 거리를 나타내므로 값이 클수록 클러스터 간 구별이 잘 되는 것이기 때문입니다.
 ![image](https://github.com/user-attachments/assets/4792e5aa-b350-4c9f-ac10-4c54f1d430ea)
+
+
+
+위와 같은 방법으로 클러스터링을 진행하고, 결과를 프로파일링해서  
+
+
+(1) k-means
+
+
+k-means의 결과,  
+
 
 다음은 k = 4일 때, k-means 결과입니다.
 
