@@ -141,19 +141,59 @@ print(choose_best_alg)
 
 ward의 ac값이 가장 높은 것을 확인할 수 있습니다. 이는 ward의 방법이 가장 강력한 클러스터링 구조를 식별한다는 것을 의미합니다.
 
+4개의 클러스터링 기법에서 target cluster를 찾았으면, 이제 두 번 이상 나온 지역을 추출합니다.
+```
+result1 <- as.vector(k_means_result)
+result2 <- as.vector(k_med_result)
+result3 <- as.vector(hcut_result)
+result4 <- as.vector(gmm_result)
+result_vector <- c(result1, result2, result3, result4)
+value_counts <- table(result_vector)
 
-(1) k-means
+result <- unique(result_vector[duplicated(result_vector) | duplicated(result_vector, fromLast = TRUE)]) # 중복된 값들만 추출한 후, 그 중에서도 고유한 값들만 반환(==두 번 이상 중복)
+print(result)
+```
+![image](https://github.com/user-attachments/assets/6bf2c543-bd99-4376-b39c-b2fd0ec62268)
 
+해당 지역들이 target으로 선정된 지역들입니다.
 
-k-means의 결과,  
+## 2. 회귀 분석 모델링
+이제 해당 지역들이 있는 주유소에 추가적으로 급속 전기차 충전기를 설치를 고려합니다. 
 
+다음과 같이 인구수 한 명당 급속 충전기, 친환경차 중 전기차 비율, 전기차 한 대당 급속 충전소 등의 파생 변수를 추가하여 급속 충전소 구축이 얼마나 잘 되어 있는지 비율로 확인하였습니다. (급속 충전기가 없는 지역은 제거)
 
+![image](https://github.com/user-attachments/assets/b5ea6ee3-0708-4a0b-aed7-5fb3fb71342a)
 
+## 2.1 다중공선성 제거
+입지 기준을 설정하기 위해 종속 변수 Y = '급속충전기'일 때, 이 종속 변수를 가장 잘 설명하는 독립 변수를 확인합니다. 
 
+그전에 다중공선성을 확인해야 합니다. 다중공선성은 회귀 분석 모델의 독립 변수들 간에 강한 상관관계가 나타나는 문제로서, 회귀 계수의 추정치가 불안정해지므로 어떤 변수의 회귀 계수가 실제로 종속 변수에 영향을 미쳤는지, 즉 독립 변수의 순수한 영향을 분리해서 확인하기 어렵게 만듭니다.
 
- 
-## 2. 회귀분석 모델링
+```
+df_cor <- df%>%
+  select(-법정동,-전기차.충전소.개수)
+corr_df <- cor(df_cor)
+corrplot(corr_df, method = 'number', order = 'hclust', type = 'lower', diag = FALSE)
+```
+![image](https://github.com/user-attachments/assets/1828fe27-58ad-4625-b28f-d442f277cc02)
 
+```
+set.seed(123)
+model <- lm(급속충전기.대.~., df_cor)
+vif(model)
+```
+![image](https://github.com/user-attachments/assets/6a5e6e28-0ef0-49c3-bbbe-50a7bff49573)
+
+먼저 모든 변수로 회귀 분석 모델을 만든 다음, vif( ) 메서드를 통해 다중공선성을 확인했습니다. 그리고 VIF가 10 이상인 변수를 제거했습니다.
+
+## 2.2 변수 선택
+p개의 독립 변수들에 대해 만들어질 수 있는 가능한 모든 조합을 다 고려하는 방법인 best subset selection을 진행하였습니다. 그 결과는 다음 그림과 같습니다.
+![image](https://github.com/user-attachments/assets/6d419a77-8fca-41e4-a6cb-41e1f5660525)
+
+## 3. Factor Analysis - KMO 검정
+best subset selection을 통해 선택된 변수들
+
+이 그림의 의미는 
 ## 3. PCA를 이용한 평가지표 설정
 
 ## 4. 최종 선택
