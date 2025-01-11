@@ -1,4 +1,4 @@
-# 2023년 숭실대학교 캡스톤 디자인 프로젝트
+ # 2023년 숭실대학교 캡스톤 디자인 프로젝트
 ## 팀 프로젝트
 ### 주제 선정 이유
 (1) 탄소중립과 온실가스 감축
@@ -187,13 +187,44 @@ vif(model)
 먼저 모든 변수로 회귀 분석 모델을 만든 다음, vif( ) 메서드를 통해 다중공선성을 확인했습니다. 그리고 VIF가 10 이상인 변수를 제거했습니다.
 
 ## 2.2 변수 선택
-p개의 독립 변수들에 대해 만들어질 수 있는 가능한 모든 조합을 다 고려하는 방법인 best subset selection을 진행하였습니다. 그 결과는 다음 그림과 같습니다.
+p개의 독립 변수들에 대해 만들어질 수 있는 가능한 모든 조합을 다 고려하는 방법인 best subset selection을 진행해서 Y = 급속충전기.대.~일 때, 가장 잘 설명할 수 있는 변수들의 조합을 찾앗습니다. 그 결과는 다음 그림과 같습니다.
+
 ![image](https://github.com/user-attachments/assets/6d419a77-8fca-41e4-a6cb-41e1f5660525)
 
-## 3. Factor Analysis - KMO 검정
-best subset selection을 통해 선택된 변수들
+변수들을 최대한 줄여서 PCA를 이용한 평가지표에 반영하는 것이 목표이기 때문에, 변수 개수에 민감하게 반응하는 BIC를 평가 지표로 선택했습니다.
 
-이 그림의 의미는 
+```
+#Performance measures
+cbind( 
+  RSS = summary(bestsub.model)$rss,
+  Cp     = summary(bestsub.model)$cp,
+  r2     = summary(bestsub.model)$rsq,
+  Adj_r2 = summary(bestsub.model)$adjr2,
+  BIC    =summary(bestsub.model)$bic
+)
+```
+![image](https://github.com/user-attachments/assets/24d4a472-aa0b-4ba5-b8d7-a086cebbd066)
+
+그러나 BIC 값의 차이가 유의미할 만큼 충분히 크지 않고, KMO 검정 결과 변수의 수가 늘어날수록 MSA 값이 높아졌습니다.
+이런한 경우, 모델들 간의 관계가 Nested이므로 Partial F-Test를 통해 모델들 간에 통계적으로 유의미한 차이가 있는지를 확인했습니다.
+```
+lm2 <- lm(급속충전기.대.~인구수+완속충전기.대., data=df2)
+
+lm3 <- lm(급속충전기.대.~인구수+완속충전기.대.
+          +친환경차_전기차.비율, data=df2)
+
+lm4 <- lm(급속충전기.대.~인구수+완속충전기.대.
+          +전기차.등록.수
+          +친환경차_전기차.비율, data=df2)
+
+anova(lm2,lm3,lm4)
+```
+ ![image](https://github.com/user-attachments/assets/a2a7ac90-71ea-4f31-8b86-6054641883c1)
+
+Model 2와 Model 3의 p 값이 유의하지 않은 것을 확인할 수 있습니다. 이는 Model 1에 변수를 추가적으로 더해도 모델 적합도가 향상되지 않는다는 것을 의미합니다. 그러므로 최종적으로 인구수와 완속충전기(대) 변수를 선택합니다.
+
+## 3. Factor-Analysis 
+
 ## 3. PCA를 이용한 평가지표 설정
 
 ## 4. 최종 선택
