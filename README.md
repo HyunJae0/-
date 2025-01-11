@@ -40,3 +40,4 @@ Python
 ## 4. 최종 선택
 
 # 결과
+![image](https://github.com/user-attachments/assets/02a5beb5-99ac-4a84-8be4-66df44f432c1)
