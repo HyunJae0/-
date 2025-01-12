@@ -358,4 +358,19 @@ forbidden_area_centers = [(37.542222, 126.9952778), (37.5358333, 126.9772222)]
 forbidden_area_radius = 3.7 # 반경 3.7km 
 ```
 # 결과
+비행 금지 구역 내에 있는 주유소를 제외하고, 가장 가까운 충전소까지의 거리를 확인해서 거리가 가장 먼 주유소들의 위경도를 추출한 결과입니다.
+```
+max_sum_dis_row = result_df.groupby("법정동")["sum_dis"].idxmax()
+max_sum_dis_df = result_df.loc[max_sum_dis_row]
+max_sum_dis_lat = max_sum_dis_df["Latitude"]
+max_sum_dis_lon = max_sum_dis_df["Longitude"]
+
+mapping_result_df = pd.DataFrame({"법정동": max_sum_dis_df["법정동"],"Latitude": max_sum_dis_lat,"Longitude": max_sum_dis_lon})
+```
+![image](https://github.com/user-attachments/assets/e2133583-caaa-4f26-bef0-a9c71a711b03)
+
+다음은 위의 최종 선택된 주유소들의 위경도 좌표를 주소로 변환한 결과입니다.
+![image](https://github.com/user-attachments/assets/78d28717-78f6-4986-a507-74126dc7c6bd)
+
+
 ![image](https://github.com/user-attachments/assets/02a5beb5-99ac-4a84-8be4-66df44f432c1)
